@@ -1,0 +1,36 @@
+# =====================================================================
+# dbt_project.yml - I320D Retail Final Project
+# =====================================================================
+name: 'retail'
+version: '1.0.0'
+config-version: 2
+
+# Must match a profile name in ~/.dbt/profiles.yml
+# (see profiles.yml.example in this folder)
+profile: 'retail'
+
+model-paths:    ["models"]
+analysis-paths: ["analyses"]
+test-paths:     ["tests"]
+seed-paths:     ["seeds"]
+macro-paths:    ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  retail:
+    # Layer 1 - clean, cast, rename. One model per staging source.
+    staging:
+      +materialized: view
+      +schema: staging_clean
+    # Layer 2 - the dimensional model (facts + dimensions).
+    star:
+      +materialized: table
+      +schema: star
+    # Layer 3 - reporting-ready data products consumed by Superset.
+    products:
+      +materialized: table
+      +schema: products

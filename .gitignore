@@ -1,0 +1,41 @@
+# ---------------------------------------------------------------
+# I320D Retail Final Project - .gitignore
+# ---------------------------------------------------------------
+
+# --- Course data (do NOT commit: supplied dataset, see data/README.md) ---
+data/*.csv
+data/*.CSV
+data/*.tsv
+data/*.parquet
+data/*.xlsx
+
+# --- Secrets: never commit credentials ---
+.env
+*.env
+.pgpass
+profiles.yml
+!profiles.yml.example
+*.pem
+*.key
+secrets*
+
+# --- dbt ---
+target/
+dbt_packages/
+logs/
+.user.yml
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+dbt-env/
+.ipynb_checkpoints/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

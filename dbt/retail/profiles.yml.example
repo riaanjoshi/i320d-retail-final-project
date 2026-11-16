@@ -1,0 +1,29 @@
+# =====================================================================
+# profiles.yml.example
+# ---------------------------------------------------------------------
+# COPY the block below into ~/.dbt/profiles.yml (do NOT commit the real
+# file - it is listed in .gitignore because it holds a password).
+#
+# The password is read from an environment variable so that no secret
+# ever lands in git. Before running dbt:
+#
+#   export PGPASSWORD='your-database-password'
+#   dbt debug
+#
+# To avoid re-exporting every session, create ~/.pgpass instead:
+#   echo 'HOST:5432:*:YOUR_ROLE:YOUR_PASSWORD' >> ~/.pgpass
+#   chmod 600 ~/.pgpass
+# =====================================================================
+
+retail:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: info-smith-i320.inf.utexas.edu
+      port: 5432
+      user: jupyter-rdj884          # TODO confirm your role
+      pass: "{{ env_var('PGPASSWORD') }}"
+      dbname: dataeng               # TODO confirm: dataeng or postgres
+      schema: retail_rdj884         # TODO confirm your assigned schema
+      threads: 4

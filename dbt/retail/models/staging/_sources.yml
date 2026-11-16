@@ -1,0 +1,185 @@
+version: 2
+
+sources:
+  - name: staging
+    schema: staging
+    description: >
+      Raw CSV loads for the I320D Retail project. Loaded by
+      sql/01_create_staging.sql + sql/02_load_staging.psql. Every column
+      is VARCHAR here on purpose: staging accepts whatever the source
+      sends so that quality can be measured rather than silently
+      rejected. All casting happens in the stg_* models.
+
+    tables:
+      - name: customers
+        description: "One row per retail customer account."
+        columns:
+          - name: customer_id
+            description: "Business key for a customer, e.g. CUS-000001."
+            data_tests: [not_null, unique]
+          - name: email
+            description: "Customer email address. Mask before publishing."
+          - name: state
+            description: "Two-letter US state code of the customer."
+          - name: loyalty_tier
+            description: "Loyalty program tier label."
+          - name: signup_date
+            description: "Date the account was created (YYYY-MM-DD as text)."
+          - name: email_opt_in
+            description: "Y/N marketing consent flag."
+
+      - name: stores
+        description: "One row per physical store location."
+        columns:
+          - name: store_id
+            description: "Business key for a store, e.g. STR-01."
+            data_tests: [not_null, unique]
+          - name: region
+            description: "Geographic region the store rolls up to."
+          - name: square_feet
+            description: "Selling floor area."
+          - name: open_date
+            description: "Date the store opened."
+
+      - name: suppliers
+        description: "One row per product supplier."
+        columns:
+          - name: supplier_id
+            description: "Business key for a supplier, e.g. SUP-001."
+            data_tests: [not_null, unique]
+          - name: lead_time_days
+            description: "Quoted replenishment lead time in days."
+
+      - name: product_categories
+        description: "One row per merchandise category, rolling up to a department."
+        columns:
+          - name: category_id
+            description: "Business key for a category, e.g. CAT-01."
+            data_tests: [not_null, unique]
+          - name: department_name
+            description: "Department the category belongs to."
+          - name: category_name
+            description: "Category label."
+
+      - name: payment_methods
+        description: "One row per tender type accepted at checkout."
+        columns:
+          - name: payment_method_id
+            description: "Business key for a payment method, e.g. PAY-01."
+            data_tests: [not_null, unique]
+          - name: is_electronic
+            description: "Y/N flag for electronic tender."
+
+      - name: products
+        description: "One row per sellable product (SKU)."
+        columns:
+          - name: product_id
+            description: "Business key for a product, e.g. PRD-1001."
+            data_tests: [not_null, unique]
+          - name: sku
+            description: "Stock keeping unit code."
+            data_tests: [not_null]
+          - name: category_id
+            description: "FK to product_categories."
+            data_tests:
+              - relationships:
+                  to: source('staging', 'product_categories')
+                  field: category_id
+          - name: supplier_id
+            description: "FK to suppliers."
+            data_tests:
+              - relationships:
+                  to: source('staging', 'suppliers')
+                  field: supplier_id
+          - name: list_price
+            description: "Current list price, as text."
+          - name: unit_cost
+            description: "Unit cost of goods, as text."
+          - name: product_status
+            description: "Lifecycle status, e.g. Active."
+
+      - name: orders
+        description: "One row per customer order header."
+        columns:
+          - name: order_id
+            description: "Business key for an order, e.g. ORD-000001."
+            data_tests: [not_null, unique]
+          - name: customer_id
+            description: "FK to customers."
+            data_tests:
+              - relationships:
+                  to: source('staging', 'customers')
+                  field: customer_id
+          - name: store_id
+            description: "FK to stores."
+            data_tests:
+              - relationships:
+                  to: source('staging', 'stores')
+                  field: store_id
+          - name: payment_method_id
+            description: "FK to payment_methods."
+            data_tests:
+              - relationships:
+                  to: source('staging', 'payment_methods')
+                  field: payment_method_id
+          - name: order_date
+            description: "Date the order was placed (YYYY-MM-DD as text)."
+          - name: order_channel
+            description: "Sales channel, e.g. In-Store, Online."
+
+      - name: order_lines
+        description: >
+          One row per line item on an order. This is the transaction
+          grain and the expected source of the primary sales fact.
+        columns:
+          - name: order_line_id
+            description: "Business key for a line item, e.g. OLN-0000001."
+            data_tests: [not_null, unique]
+          - name: order_id
+            description: "FK to orders."
+            data_tests:
+              - not_null
+              - relationships:
+                  to: source('staging', 'orders')
+                  field: order_id
+          - name: product_id
+            description: "FK to products."
+            data_tests:
+              - relationships:
+                  to: source('staging', 'products')
+                  field: product_id
+          - name: quantity
+            description: "Units sold on this line, as text."
+          - name: unit_price
+            description: "Price charged per unit on this line, as text."
+          - name: discount_pct
+            description: "Discount applied to this line. Confirm 0-1 vs 0-100."
+          - name: line_status
+            description: "Line outcome, e.g. Fulfilled, Returned."
+
+      - name: inventory_snapshot
+        description: >
+          One row per product per store per snapshot date. A periodic
+          snapshot - do not union it with the sales fact.
+        columns:
+          - name: inventory_id
+            description: "Surrogate business key for the snapshot row."
+            data_tests: [not_null, unique]
+          - name: store_id
+            description: "FK to stores."
+            data_tests:
+              - relationships:
+                  to: source('staging', 'stores')
+                  field: store_id
+          - name: product_id
+            description: "FK to products."
+            data_tests:
+              - relationships:
+                  to: source('staging', 'products')
+                  field: product_id
+          - name: units_on_hand
+            description: "Units physically available at snapshot time."
+          - name: reorder_point
+            description: "Replenishment trigger level."
+          - name: snapshot_date
+            description: "Date the snapshot was taken."

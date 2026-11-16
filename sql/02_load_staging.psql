@@ -1,0 +1,91 @@
+-- =====================================================================
+-- 02_load_staging.psql
+-- I320D Data Engineering - Retail Final Project
+-- Bulk-loads every supplied CSV into its staging table.
+--
+-- Run from the PROJECT ROOT (the folder that contains data/):
+--   cd ~/retail
+--   psql -h <HOST> -U <YOUR_ROLE> -d <DATABASE> -f sql/02_load_staging.psql
+--
+-- WHY THE WORKING DIRECTORY MATTERS:
+-- \copy is a psql CLIENT-side meta-command. Unlike server-side COPY,
+-- the file path is resolved on the machine running psql, relative to
+-- the directory psql was launched from. The paths below are written as
+-- 'data/<file>.csv', so psql must be launched from the project root or
+-- every \copy will fail with "No such file or directory".
+--
+-- CSV FORMAT NOTES:
+--   - Every file has a header row  -> HEADER true
+--   - Column order in each file matches the staging table definition
+--   - Empty unquoted fields are loaded as NULL -> NULL ''
+--
+-- RE-RUNNABLE: each table is TRUNCATEd before loading, so running this
+-- script twice does not double the rows.
+-- Never put passwords in this file.
+-- =====================================================================
+
+\echo ''
+\echo '=== Loading staging schema from data/*.csv ==='
+\echo ''
+
+-- ---- Dimension-style reference files (small) ------------------------
+
+\echo 'Loading staging.customers ...'
+TRUNCATE TABLE staging.customers;
+\copy staging.customers FROM 'data/customers.csv' WITH (FORMAT csv, HEADER true, NULL '')
+
+\echo 'Loading staging.stores ...'
+TRUNCATE TABLE staging.stores;
+\copy staging.stores FROM 'data/stores.csv' WITH (FORMAT csv, HEADER true, NULL '')
+
+\echo 'Loading staging.suppliers ...'
+TRUNCATE TABLE staging.suppliers;
+\copy staging.suppliers FROM 'data/suppliers.csv' WITH (FORMAT csv, HEADER true, NULL '')
+
+\echo 'Loading staging.product_categories ...'
+TRUNCATE TABLE staging.product_categories;
+\copy staging.product_categories FROM 'data/product_categories.csv' WITH (FORMAT csv, HEADER true, NULL '')
+
+\echo 'Loading staging.payment_methods ...'
+TRUNCATE TABLE staging.payment_methods;
+\copy staging.payment_methods FROM 'data/payment_methods.csv' WITH (FORMAT csv, HEADER true, NULL '')
+
+\echo 'Loading staging.products ...'
+TRUNCATE TABLE staging.products;
+\copy staging.products FROM 'data/products.csv' WITH (FORMAT csv, HEADER true, NULL '')
+
+-- ---- Transaction files (large) --------------------------------------
+
+\echo 'Loading staging.orders ...'
+TRUNCATE TABLE staging.orders;
+\copy staging.orders FROM 'data/orders.csv' WITH (FORMAT csv, HEADER true, NULL '')
+
+\echo 'Loading staging.order_lines ...'
+TRUNCATE TABLE staging.order_lines;
+\copy staging.order_lines FROM 'data/order_lines.csv' WITH (FORMAT csv, HEADER true, NULL '')
+
+\echo 'Loading staging.inventory_snapshot ...'
+TRUNCATE TABLE staging.inventory_snapshot;
+\copy staging.inventory_snapshot FROM 'data/inventory_snapshot.csv' WITH (FORMAT csv, HEADER true, NULL '')
+
+\echo ''
+\echo '=== Load complete. Row counts: ==='
+
+SELECT 'customers'          AS table_name, COUNT(*) AS rows FROM staging.customers
+UNION ALL SELECT 'stores',              COUNT(*) FROM staging.stores
+UNION ALL SELECT 'suppliers',           COUNT(*) FROM staging.suppliers
+UNION ALL SELECT 'product_categories',  COUNT(*) FROM staging.product_categories
+UNION ALL SELECT 'payment_methods',     COUNT(*) FROM staging.payment_methods
+UNION ALL SELECT 'products',            COUNT(*) FROM staging.products
+UNION ALL SELECT 'orders',              COUNT(*) FROM staging.orders
+UNION ALL SELECT 'order_lines',         COUNT(*) FROM staging.order_lines
+UNION ALL SELECT 'inventory_snapshot',  COUNT(*) FROM staging.inventory_snapshot
+ORDER BY table_name;
+
+\echo ''
+\echo 'Expected (header row excluded):'
+\echo '  customers 3010 | inventory_snapshot 3800 | order_lines 31459'
+\echo '  orders 14000 | payment_methods 6 | product_categories 14'
+\echo '  products 380 | stores 10 | suppliers 25'
+\echo ''
+\echo 'Next: psql ... -f sql/03_verify_staging.sql'
